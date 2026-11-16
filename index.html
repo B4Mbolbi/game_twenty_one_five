@@ -218,6 +218,20 @@
     </div>
   </div>
 
+    <!-- МОДАЛКА СБРОСА ПРОГРЕССА -->
+    <div id="resetModal" class="hidden fixed inset-0 bg-black/85 z-50 flex items-center justify-center p-4">
+      <div class="pixel-box border-rose-500 w-full max-w-sm p-5 flex flex-col gap-4 text-center">
+        <div class="text-base sm:text-lg text-rose-500">СБРОС ПРОГРЕССА</div>
+        <p class="text-[9px] text-slate-300 leading-relaxed">
+          ВЫ УВЕРЕНЫ? ВСЕ КУПЛЕННЫЕ МАШИНЫ, ДЕНЬГИ И РЕКОРДЫ БУДУТ УДАЛЕНЫ НАВСЕГДА.
+        </p>
+        <div class="grid grid-cols-2 gap-2 pt-1">
+          <button id="cancelResetBtn" class="pixel-btn py-3 text-[9px]">ОТМЕНА</button>
+          <button id="confirmResetBtn" class="pixel-btn pixel-btn-red py-3 text-[9px]">УДАЛИТЬ</button>
+        </div>
+      </div>
+    </div>
+
   <!-- Модули -->
   <script type="module" src="js/main.js"></script>
 </body>

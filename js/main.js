@@ -6,7 +6,7 @@ import { renderGarage, bindGarageControls, setGameStateRef } from './screens/gar
 import { startGaragePreviewLoop } from './render/garage.js';
 import { setRaceRefs, startRaceFlow, bindRaceControls } from './screens/raceScreen.js';
 import { resetRace } from './race/physics.js';
-import { GAME_VERSION } from './config/constants.js'; // <-- ИМПОРТ ВЕРСИИ
+import { GAME_VERSION } from './config/constants.js';
 
 initTelegram();
 
@@ -32,12 +32,23 @@ async function boot() {
         switchToRace();
     };
 
-    // 6. Кнопка сброса прогресса
+    // 6. Логика кнопки сброса
     document.getElementById('resetSaveBtn').onclick = () => {
-        const confirmReset = confirm('Вы уверены, что хотите сбросить весь прогресс? Все машины и деньги будут удалены.');
-        if (confirmReset) {
+        document.getElementById('resetModal').classList.remove('hidden');
+    };
+
+    document.getElementById('cancelResetBtn').onclick = () => {
+        document.getElementById('resetModal').classList.add('hidden');
+    };
+
+    document.getElementById('confirmResetBtn').onclick = () => {
+        try {
+            // Удаляем ключ сохранения
             localStorage.removeItem(STORAGE_KEY);
-            window.location.reload(); // Перезагружаем страницу для применения нового сейва
+            // Принудительно перезагружаем страницу
+            window.location.reload();
+        } catch (e) {
+            alert('Ошибка при удалении сохранения: ' + e.message);
         }
     };
 
@@ -52,6 +63,7 @@ function switchToRace() {
     document.getElementById('garageScreen').classList.add('hidden');
     document.getElementById('finishModal').classList.add('hidden');
     document.getElementById('falseStartModal').classList.add('hidden');
+    document.getElementById('resetModal').classList.add('hidden'); // На всякий случай скрываем
     document.getElementById('raceScreen').classList.remove('hidden');
     startRaceFlow();
 }
@@ -62,6 +74,7 @@ function switchToGarage() {
     document.getElementById('raceScreen').classList.add('hidden');
     document.getElementById('finishModal').classList.add('hidden');
     document.getElementById('falseStartModal').classList.add('hidden');
+    document.getElementById('resetModal').classList.add('hidden'); // На всякий случай скрываем
     document.getElementById('garageScreen').classList.remove('hidden');
     renderGarage();
 }
