@@ -4,6 +4,7 @@ import { getCarStats } from '../core/stats.js';
 import { audio } from '../core/audio.js';
 import { triggerHaptic } from '../core/telegram.js';
 import { saveGame } from '../core/storage.js';
+import { RENDER_CONFIG } from '../config/gameConfig.js'; // <-- Добавьте импорт в начале файла
 
 export const RACE_DISTANCE = 402.33;
 export const BASE_GEAR_RATIOS = [0, 3.30, 2.28, 1.70, 1.33, 1.07, 0.88];
@@ -52,31 +53,26 @@ export function initRace(gameState, onFalseStart) {
 
     // 4. Настройка сложности (подгоняем мощность)
     const playerPowerToWeight = stats.hp / stats.weight;
-    
-    // Соперник будет чуть слабее или сильнее (от -9% до +5%)
-    const aiFactor = 0.91 + Math.random() * 0.14; 
-    const aiPowerToWeight = playerPowerToWeight * aiFactor;
+    // Теперь ИИ чуть сильнее, чтобы было интересно
+    const aiPowerToWeight = playerPowerToWeight * RENDER_CONFIG.ai.powerFactor;
 
     race = {
-        phase: 'countdown',
-        countdownTimer: 0,
-        lightStage: 0,
-        elapsedTime: 0,
-        frame: 0,
-        player: {
-            carDef, colorObj, stats,
-            dist: 0, speed: 0, maxSpeedKmh: 0, rpm: 1000, gear: 0,
-            nosAmount: 100, isNosActive: false, isWheelspin: false,
-            wheelAngle: 0, shiftCooldown: 0, launchRating: 'НОРМА', finishedTime: null
-        },
+        // ... player без изменений ...
         ai: {
             carDef: aiCarDef, 
             colorObj: aiColor,
-            colorIdx: aiColorIdx, // <-- Сохраняем индекс цвета для отрисовки
+            colorIdx: aiColorIdx,
             dist: 0, speed: 0,
             powerToWeight: aiPowerToWeight,
-            reactionDelay: 0.12 + Math.random() * 0.20,
-            wheelAngle: 0, finishedTime: null
+            reactionDelay: 0.15 + Math.random() * 0.10, // Чуть быстрее реакция
+            wheelAngle: 0, 
+            finishedTime: null,
+            
+            // --- НОВЫЕ ПАРАМЕТРЫ ДЛЯ ИИ ---
+            currentGear: 1, // ИИ начинает с 1-й передачи
+            shiftTimer: 0,  // Таймер для переключения
+            maxSpeed: 65 + aiPowerToWeight * 70, // Максимальная скорость
+            rpm: 1000
         }
     };
 
@@ -252,9 +248,28 @@ export function updateRacePhysics(dt, onFinish) {
     }
 
     if (race.phase === 'racing' && race.elapsedTime > ai.reactionDelay) {
-        const aiMaxSpeed = 63 + ai.powerToWeight * 66;
-        const aiAccel = (ai.powerToWeight * 36.5) * (1 - ai.speed / aiMaxSpeed);
-        ai.speed += Math.max(1.5, aiAccel) * dt;
+        // 1. Проверка переключения передач
+        if (ai.shiftTimer > 0) {
+            ai.shiftTimer -= dt;
+        } else {
+            // Если скорость достигла предела для текущей передачи, переключаем
+            const gearMaxSpeed = ai.maxSpeed * (ai.currentGear / 6);
+            if (ai.speed > gearMaxSpeed && ai.currentGear < 6) {
+                ai.currentGear++;
+                ai.shiftTimer = RENDER_CONFIG.ai.shiftDelay; // Задержка переключения
+                // Небольшая потеря скорости при переключении
+                ai.speed *= 0.98; 
+            }
+        }
+
+        // 2. Разгон
+        const aiAccelFactor = (ai.powerToWeight * 40) * (1 - ai.speed / ai.maxSpeed);
+        
+        // Если ИИ на паузе переключения, он не разгоняется
+        if (ai.shiftTimer <= 0) {
+            ai.speed += Math.max(1.5, aiAccelFactor) * dt;
+        }
+        
         ai.dist += ai.speed * dt;
         ai.wheelAngle += ai.speed * dt * 1.4;
     }
