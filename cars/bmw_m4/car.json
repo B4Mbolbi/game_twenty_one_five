@@ -1,0 +1,33 @@
+{
+  "id": "bmw_m4",
+  "name": "BMW M4",
+    "sprites": {
+    "0": "sprite.png"
+
+    },
+  "sprite": "sprite.png",
+  "spriteScale": 1.0,
+  "spriteAnchorY": 0.85,
+  "defaultColorIdx": 4,
+  "price": 15000,
+  "baseHp": 680,
+  "baseWeight": 1450,
+  "baseMaxRpm": 9200,
+  "desc": "Осетия одобряет",
+  
+
+  "wheels": {
+    "yOffset": 0.761,
+    "frontX": 0.819,
+    "rearX": 0.226,
+    "radius": 0.2,
+    "opacity": 0.5
+  },
+
+    "upgrades": {
+    "engine": { "baseCost": 1200, "costMult": 2.0 },
+    "turbo":  { "baseCost": 1500, "costMult": 2.2 },
+    "tires":  { "baseCost": 800, "costMult": 1.5 }
+  }
+
+}

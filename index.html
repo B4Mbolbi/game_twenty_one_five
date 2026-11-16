@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>12.5.1 — Pixel Drag Racing</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body class="max-w-md mx-auto w-full relative select-none">
+
+  <header class="pixel-box px-3 py-2 flex justify-between items-center z-20 shrink-0">
+    <div class="flex items-center gap-2">
+      <span class="logo-1251 text-base sm:text-lg font-bold">12.5.1</span>
+      <span class="text-[7px] bg-rose-600/30 border border-rose-500/60 text-rose-300 px-1 py-0.5">DRAG</span>
+    </div>
+    <div class="flex items-center gap-2.5">
+      <button id="soundToggleBtn"
+        class="text-[10px] bg-slate-800 border border-slate-600 px-2 py-1 text-slate-300 active:scale-95"
+        title="Звук">🔊</button>
+      <div
+        class="bg-black/70 border border-emerald-500/60 px-2.5 py-1 text-emerald-400 text-xs shadow-[inset_0_0_8px_rgba(16,185,129,0.2)]">
+        $<span id="balanceDisplay">1500</span>
+      </div>
+    </div>
+  </header>
+
+  <div id="toastMessage"
+    class="fixed top-14 left-1/2 -translate-x-1/2 z-50 pointer-events-none opacity-0 transition-opacity duration-200 w-11/12 max-w-sm">
+    <div
+      class="pixel-box bg-slate-900/95 border-amber-400 px-3 py-2 text-center text-[9px] leading-relaxed text-amber-300 shadow-xl">
+      Сообщение</div>
+  </div>
+
+  <main id="garageScreen" class="flex-1 flex flex-col overflow-hidden p-2 gap-2">
+    <div class="pixel-box relative h-44 sm:h-48 shrink-0 overflow-hidden flex flex-col justify-between p-2">
+      <div class="flex justify-between items-start z-10">
+        <div>
+          <div class="flex items-center gap-1.5">
+            <span id="carClassBadge" class="bg-amber-500 text-black text-[10px] px-1.5 py-0.5 font-bold">D</span>
+            <h2 id="carNameDisplay" class="text-[11px] sm:text-xs text-white drop-shadow">CIVIC EG6 '92</h2>
+          </div>
+          <p id="carBestTimeDisplay" class="text-[8px] text-cyan-300 mt-1">РЕКОРД 1/4: --.--- с</p>
+        </div>
+        <div id="colorPalette"
+          class="flex flex-wrap justify-end gap-1 bg-black/60 p-1 border border-slate-700 max-w-[116px]"></div>
+      </div>
+      <div class="absolute inset-0 pointer-events-none">
+        <canvas id="garageCanvas"></canvas>
+      </div>
+      <div class="flex justify-between items-end z-10 mt-auto">
+        <button id="prevCarBtn" class="pixel-btn px-2.5 py-1.5 text-xs">&lt;</button>
+        <div class="flex gap-2.5 bg-black/80 px-2.5 py-1 border border-slate-700 text-[8px]">
+          <div class="text-center">
+            <div class="text-slate-400">МОЩН.</div>
+            <div class="text-amber-400 mt-0.5"><span id="statHp">165</span>ЛС</div>
+          </div>
+          <div class="text-center border-l border-slate-700 pl-2.5">
+            <div class="text-slate-400">ВЕС</div>
+            <div class="text-cyan-400 mt-0.5"><span id="statWeight">1020</span>КГ</div>
+          </div>
+          <div class="text-center border-l border-slate-700 pl-2.5">
+            <div class="text-slate-400">ЗАЦЕП</div>
+            <div class="text-emerald-400 mt-0.5"><span id="statGrip">1</span>/5</div>
+          </div>
+        </div>
+        <button id="nextCarBtn" class="pixel-btn px-2.5 py-1.5 text-xs">&gt;</button>
+      </div>
+    </div>
+
+    <div id="buyCarPanel"
+      class="hidden flex-1 pixel-box flex flex-col items-center justify-center p-4 text-center gap-4">
+      <div class="text-amber-400 text-xs">АВТОМОБИЛЬ ЗАБЛОКИРОВАН</div>
+      <p id="carDescDisplay" class="text-[9px] text-slate-300 leading-relaxed max-w-xs">Описание автомобиля</p>
+      <button id="buyCarBtn" class="pixel-btn pixel-btn-green px-5 py-3 text-xs">КУПИТЬ ЗА $<span
+          id="carPriceDisplay">3500</span></button>
+    </div>
+
+    <div id="tuningPanel" class="flex-1 pixel-box flex flex-col overflow-hidden p-2">
+      <div class="text-[9px] text-slate-400 pb-1.5 border-b border-slate-700 flex justify-between">
+        <span>ТЮНИНГ-АТЕЛЬЕ 12.5.1</span>
+        <span class="text-amber-400">УР. 1-5</span>
+      </div>
+      <div id="upgradesList" class="flex-1 overflow-y-auto space-y-1.5 py-1.5 pr-1"></div>
+    </div>
+
+    <div class="shrink-0 pt-0.5">
+      <button id="startRaceMenuBtn" class="pixel-btn pixel-btn-red w-full py-3.5 text-xs sm:text-sm tracking-wider">🏁
+        НА СТАРТ 12.5.1 (402М)</button>
+    </div>
+  </main>
+
+  <section id="raceScreen" class="hidden flex-1 flex flex-col justify-between overflow-hidden relative">
+    <div class="bg-slate-950/95 border-b-2 border-slate-800 p-2 z-10 shrink-0">
+      <div class="flex justify-between items-center text-[8px] mb-1">
+        <span class="text-cyan-400">ВЫ: <span id="playerDistText">0</span>м</span>
+        <span id="raceStatusBanner" class="text-amber-400">ПРОГРЕВ НА НЕЙТРАЛИ</span>
+        <span class="text-rose-400">СОПЕРНИК: <span id="aiDistText">0</span>м</span>
+      </div>
+      <div class="relative h-3.5 bg-slate-900 border border-slate-700 overflow-hidden">
+        <div class="absolute right-0 top-0 bottom-0 w-2 bg-white opacity-90"></div>
+        <div id="aiProgressBar" class="absolute top-0.5 h-1 w-3 bg-rose-500 transition-none" style="left: 0%;"></div>
+        <div id="playerProgressBar" class="absolute bottom-0.5 h-1 w-3 bg-cyan-400 transition-none" style="left: 0%;">
+        </div>
+      </div>
+    </div>
+
+    <div class="relative flex-1 w-full overflow-hidden bg-[#0c0e18]">
+      <canvas id="raceCanvas"></canvas>
+      <div id="christmasTree"
+        class="absolute top-2.5 left-1/2 -translate-x-1/2 bg-slate-950/95 border-2 border-slate-600 p-2 flex flex-col items-center gap-1.5 shadow-2xl z-10">
+        <div class="text-[6px] text-slate-400 tracking-widest">12.5.1 TREE</div>
+        <div id="lightY1" class="w-3.5 h-3.5 rounded-full bg-amber-950 border border-amber-800"></div>
+        <div id="lightY2" class="w-3.5 h-3.5 rounded-full bg-amber-950 border border-amber-800"></div>
+        <div id="lightY3" class="w-3.5 h-3.5 rounded-full bg-amber-950 border border-amber-800"></div>
+        <div id="lightGreen" class="w-4 h-4 rounded-full bg-emerald-950 border border-emerald-800"></div>
+        <div id="lightRed" class="w-3.5 h-3.5 rounded-full bg-rose-950 border border-rose-800 hidden"></div>
+      </div>
+      <div id="launchHint"
+        class="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black/85 border border-emerald-500/70 px-2.5 py-1.5 text-[7px] sm:text-[8px] text-center text-emerald-300 w-11/12 pointer-events-none leading-normal">
+        УДЕРЖИВАЙТЕ ГАЗ В ЗЕЛЕНОЙ ЗОНЕ RPM И НА ЗЕЛЕНЫЙ ВКЛЮЧИТЕ 1-Ю [+]!
+      </div>
+    </div>
+
+    <div class="pixel-box px-2.5 py-2 z-10 shrink-0 grid grid-cols-12 gap-2 items-center">
+      <div class="col-span-4 flex flex-col gap-1.5">
+        <div class="bg-black/80 border border-slate-700 p-1.5 text-center">
+          <div id="speedDisplay" class="text-sm sm:text-base text-white">0</div>
+          <div class="text-[7px] text-slate-400 mt-0.5">КМ/Ч</div>
+        </div>
+        <div class="bg-black/80 border border-slate-700 px-1.5 py-1 flex justify-between items-center text-[7px]">
+          <span class="text-cyan-400">TURBO</span>
+          <span id="boostDisplay" class="text-amber-300">0.0 BAR</span>
+        </div>
+      </div>
+      <div class="col-span-4 flex flex-col items-center justify-center">
+        <div class="relative w-24 h-16 sm:w-28 sm:h-18">
+          <canvas id="tachometerCanvas"></canvas>
+        </div>
+        <div class="text-[7px] text-slate-300 -mt-1"><span id="rpmText">1000</span> RPM</div>
+      </div>
+      <div class="col-span-4 flex flex-col gap-1.5">
+        <div class="bg-black/80 border border-amber-500/60 p-1.5 text-center">
+          <div class="text-[7px] text-slate-400">КПП</div>
+          <div id="gearDisplay" class="text-sm sm:text-base text-amber-400 mt-0.5">N</div>
+        </div>
+        <div id="shiftLight" class="py-1 border border-slate-700 bg-slate-900 text-center text-[8px] text-slate-500">
+          SHIFT!</div>
+      </div>
+    </div>
+
+    <div class="bg-slate-950 p-2 pb-3 grid grid-cols-4 gap-2 shrink-0 border-t border-slate-800">
+      <button id="shiftDownBtn" class="pixel-btn py-3.5 text-xs flex flex-col items-center justify-center gap-1">
+        <span>[-]</span><span class="text-[7px] text-slate-300">DOWN</span>
+      </button>
+      <button id="shiftUpBtn"
+        class="pixel-btn pixel-btn-amber py-3.5 text-xs flex flex-col items-center justify-center gap-1">
+        <span>[+]</span><span class="text-[7px] text-amber-100">SHIFT UP</span>
+      </button>
+      <button id="nosBtn"
+        class="pixel-btn pixel-btn-blue py-3.5 text-xs flex flex-col items-center justify-center gap-1 relative overflow-hidden">
+        <span class="z-10">NOS</span><span id="nosPctText" class="text-[7px] text-cyan-100 z-10">100%</span>
+        <div id="nosFillBar" class="absolute bottom-0 left-0 right-0 bg-cyan-300/30 transition-none pointer-events-none"
+          style="height: 100%;"></div>
+      </button>
+      <button id="gasBtn"
+        class="pixel-btn pixel-btn-green py-3.5 text-xs flex flex-col items-center justify-center gap-1">
+        <span>ГАЗ</span><span class="text-[7px] text-emerald-100">HOLD</span>
+      </button>
+    </div>
+  </section>
+
+  <div id="falseStartModal" class="hidden fixed inset-0 bg-black/85 z-40 flex items-center justify-center p-4">
+    <div class="pixel-box border-rose-500 w-full max-w-sm p-5 flex flex-col gap-4 text-center">
+      <div class="text-base sm:text-lg text-rose-500">FALSE START!</div>
+      <p class="text-[9px] text-slate-300 leading-relaxed">ВЫ ВКЛЮЧИЛИ ПЕРЕДАЧУ ДО ЗЕЛЕНОГО СИГНАЛА СВЕТОФОРА.</p>
+      <div class="grid grid-cols-2 gap-2 pt-1">
+        <button id="fsGarageBtn" class="pixel-btn py-3 text-[9px]">В ГАРАЖ</button>
+        <button id="fsRestartBtn" class="pixel-btn pixel-btn-amber py-3 text-[9px]">ПЕРЕЗАЕЗД</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="finishModal" class="hidden fixed inset-0 bg-black/85 z-40 flex items-center justify-center p-4">
+    <div class="pixel-box w-full max-w-sm p-4 flex flex-col gap-3 text-center">
+      <div class="text-[8px] text-slate-400 tracking-widest">ФИНИШ 12.5.1 — 1/4 МИЛИ</div>
+      <div id="finishTitle" class="text-base sm:text-lg text-emerald-400">ПОБЕДА!</div>
+      <div id="finishSubtitle" class="text-[8px] text-amber-300">НОВЫЙ ЛИЧНЫЙ РЕКОРД!</div>
+      <div class="bg-black/70 border border-slate-700 p-3 space-y-2 text-[9px] text-left">
+        <div class="flex justify-between"><span class="text-slate-400">ВАШЕ ВРЕМЯ:</span><span id="resPlayerTime"
+            class="text-white">12.510 с</span></div>
+        <div class="flex justify-between"><span class="text-slate-400">СОПЕРНИК:</span><span id="resAiTime"
+            class="text-rose-400">12.840 с</span></div>
+        <div class="flex justify-between"><span class="text-slate-400">СКОРОСТЬ НА ФИНИШЕ:</span><span id="resMaxSpeed"
+            class="text-cyan-400">204 км/ч</span></div>
+        <div class="flex justify-between"><span class="text-slate-400">СТАРТ:</span><span id="resLaunchRating"
+            class="text-emerald-400">PERFECT LAUNCH!</span></div>
+        <div class="border-t border-slate-700 pt-2 flex justify-between text-xs"><span
+            class="text-slate-300">НАГРАДА:</span><span class="text-emerald-400">+$<span
+              id="resReward">450</span></span></div>
+      </div>
+      <div class="grid grid-cols-2 gap-2 pt-1">
+        <button id="backToGarageBtn" class="pixel-btn py-3 text-[10px]">В ГАРАЖ</button>
+        <button id="rematchBtn" class="pixel-btn pixel-btn-green py-3 text-[10px]">ЕЩЕ ЗАЕЗД</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Модули -->
+  <script type="module" src="js/main.js"></script>
+</body>
+
+</html>

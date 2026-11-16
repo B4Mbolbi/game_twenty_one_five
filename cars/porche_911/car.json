@@ -1,0 +1,25 @@
+{
+  "id": "porsche_911",
+  "name": "PORSCHE 911 GT3",
+  "style": "porsche",
+  "spriteScale": 1.0,
+  "spriteAnchorY": 0.85,
+  "defaultColorIdx": 5,
+  "price": 18500,
+  "baseHp": 380,
+  "baseWeight": 1380,
+  "baseMaxRpm": 8400,
+  "desc": "Немецкий спорткар с оппозитным двигателем. Легкий, быстрый и смертоносный на старте.",
+  
+  "sprites": {
+    "0": "sprite.png"
+  },
+  
+  "wheels": {
+    "yOffset": 0.683,
+    "frontX": 0.742,
+    "rearX": 0.264,
+    "radius": 0.155,
+    "opacity": 0.85
+  }
+}

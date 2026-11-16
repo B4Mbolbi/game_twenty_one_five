@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Настройка колес для спрайта</title>
+    <style>
+        body {
+            background: #1a1a24;
+            color: #fff;
+            font-family: monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            display: flex;
+            gap: 20px;
+            background: #0b0c14;
+            padding: 20px;
+            border: 2px solid #2e334d;
+            border-radius: 8px;
+        }
+
+        canvas {
+            border: 1px solid #444;
+            cursor: crosshair;
+            background-image: linear-gradient(45deg, #222 25%, transparent 25%), linear-gradient(-45deg, #222 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #222 75%), linear-gradient(-45deg, transparent 75%, #222 75%);
+            background-size: 20px 20px;
+            background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+        }
+
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            width: 300px;
+        }
+
+        .output {
+            background: #000;
+            padding: 10px;
+            border: 1px solid #333;
+            font-size: 12px;
+            white-space: pre-wrap;
+            color: #4ade80;
+            height: 150px;
+            overflow-y: auto;
+        }
+
+        button {
+            background: #272c44;
+            color: white;
+            border: 2px solid #08090e;
+            padding: 10px;
+            cursor: pointer;
+            font-family: monospace;
+            font-weight: bold;
+        }
+
+        button:hover {
+            background: #3f476b;
+        }
+
+        input[type="file"] {
+            font-size: 12px;
+        }
+
+        label {
+            font-size: 12px;
+            color: #94a3b8;
+        }
+
+        .info {
+            font-size: 12px;
+            color: #fbbf24;
+            margin-bottom: 10px;
+            text-align: center;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="info">
+        1. Загрузите спрайт (PNG)<br>
+        2. Кликните по центру колеса, затем перетаскивайте его мышкой<br>
+        3. Настройте размер и прозрачность<br>
+        4. Скопируйте JSON в car.json
+    </div>
+
+    <div class="container">
+        <div style="position: relative;">
+            <canvas id="canvas" width="800" height="400"></canvas>
+        </div>
+
+        <div class="controls">
+            <input type="file" id="fileInput" accept="image/png">
+
+            <label>Размер (Radius): <span id="radiusVal" style="color: #38bdf8;">10%</span></label>
+            <input type="range" id="radiusSlider" min="1" max="20" step="0.5" value="10">
+
+            <label>Прозрачность эффекта: <span id="opacityVal" style="color: #38bdf8;">50%</span></label>
+            <input type="range" id="opacitySlider" min="0" max="100" step="5" value="50">
+
+            <button id="resetBtn">Сбросить точки</button>
+
+            <label>JSON для car.json:</label>
+            <div class="output" id="jsonOutput">// Здесь появится код</div>
+            <button id="copyBtn" style="background: #16a34a; border-color: #4ade80;">КОПИРОВАТЬ</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const fileInput = document.getElementById('fileInput');
+        const radiusSlider = document.getElementById('radiusSlider');
+        const opacitySlider = document.getElementById('opacitySlider');
+        const radiusVal = document.getElementById('radiusVal');
+        const opacityVal = document.getElementById('opacityVal');
+        const jsonOutput = document.getElementById('jsonOutput');
+
+        let img = null;
+        let imgX = 0, imgY = 0, imgW = canvas.width, imgH = canvas.height;
+
+        let points = { front: null, rear: null };
+        let radiusPercent = 10;
+        let opacityPercent = 50;
+        let animAngle = 0;
+
+        // Переменные для Drag & Drop
+        let isDragging = false;
+        let dragTarget = null; // 'front' или 'rear'
+
+        // Загрузка изображения
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                img = new Image();
+                img.onload = () => {
+                    const scale = Math.min(canvas.width / img.width, canvas.height / img.height) * 0.9;
+                    imgW = img.width * scale;
+                    imgH = img.height * scale;
+                    imgX = (canvas.width - imgW) / 2;
+                    imgY = (canvas.height - imgH) / 2;
+
+                    points = { front: null, rear: null };
+                    requestAnimationFrame(loop);
+                };
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
+
+        // Вспомогательная функция: проверка, попал ли клик в круг
+        function getClickedWheel(x, y) {
+            const r = imgH * (radiusPercent / 100);
+            if (points.front) {
+                const dx = x - points.front.px;
+                const dy = y - points.front.py;
+                if (dx * dx + dy * dy <= r * r) return 'front';
+            }
+            if (points.rear) {
+                const dx = x - points.rear.px;
+                const dy = y - points.rear.py;
+                if (dx * dx + dy * dy <= r * r) return 'rear';
+            }
+            return null;
+        }
+
+        // Нажатие мыши
+        canvas.addEventListener('mousedown', (e) => {
+            if (!img) return;
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            if (x < imgX || x > imgX + imgW || y < imgY || y > imgY + imgH) return;
+
+            // Сначала проверяем, не кликнули ли мы по уже существующему колесу
+            const clicked = getClickedWheel(x, y);
+            if (clicked) {
+                isDragging = true;
+                dragTarget = clicked;
+                canvas.style.cursor = 'grabbing';
+                return;
+            }
+
+            // Если не попали в круг — ставим новую точку
+            const pctX = (x - imgX) / imgW;
+            const pctY = (y - imgY) / imgH;
+
+            if (!points.front) {
+                points.front = { x: pctX, y: pctY, px: x, py: y };
+            } else if (!points.rear) {
+                points.rear = { x: pctX, y: pctY, px: x, py: y };
+            } else {
+                // Если обе точки есть, начинаем заново
+                points.front = { x: pctX, y: pctY, px: x, py: y };
+                points.rear = null;
+            }
+
+            updateJSON();
+        });
+
+        // Движение мыши
+        canvas.addEventListener('mousemove', (e) => {
+            if (!img) return;
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            if (isDragging && dragTarget) {
+                // Обновляем координаты перетаскиваемого колеса
+                const pctX = (x - imgX) / imgW;
+                const pctY = (y - imgY) / imgH;
+
+                points[dragTarget] = { x: pctX, y: pctY, px: x, py: y };
+                updateJSON();
+            } else {
+                // Меняем курсор, если навели на круг (чтобы было понятно, что можно тащить)
+                const hovered = getClickedWheel(x, y);
+                canvas.style.cursor = hovered ? 'grab' : 'crosshair';
+            }
+        });
+
+        // Отпускание мыши
+        window.addEventListener('mouseup', () => {
+            if (isDragging) {
+                isDragging = false;
+                dragTarget = null;
+                canvas.style.cursor = 'crosshair';
+            }
+        });
+
+        // Ползунки
+        radiusSlider.addEventListener('input', (e) => {
+            radiusPercent = parseFloat(e.target.value);
+            radiusVal.textContent = radiusPercent + '%';
+            updateJSON();
+        });
+
+        opacitySlider.addEventListener('input', (e) => {
+            opacityPercent = parseInt(e.target.value);
+            opacityVal.textContent = opacityPercent + '%';
+        });
+
+        document.getElementById('resetBtn').addEventListener('click', () => {
+            points = { front: null, rear: null };
+            updateJSON();
+        });
+
+        document.getElementById('copyBtn').addEventListener('click', () => {
+            navigator.clipboard.writeText(jsonOutput.textContent).then(() => {
+                const btn = document.getElementById('copyBtn');
+                btn.textContent = 'СКОПИРОВАНО!';
+                btn.style.background = '#0284c7';
+                setTimeout(() => {
+                    btn.textContent = 'КОПИРОВАТЬ';
+                    btn.style.background = '#16a34a';
+                }, 1500);
+            });
+        });
+
+        function updateJSON() {
+            if (!points.front || !points.rear) {
+                jsonOutput.textContent = "// Кликните по переднему, затем по заднему колесу";
+                return;
+            }
+
+            const yOffset = (points.front.y + points.rear.y) / 2;
+            const radius = radiusPercent / 100;
+            const opacity = opacityPercent / 100;
+
+            const json = {
+                "wheels": {
+                    "yOffset": parseFloat(yOffset.toFixed(3)),
+                    "frontX": parseFloat(points.front.x.toFixed(3)),
+                    "rearX": parseFloat(points.rear.x.toFixed(3)),
+                    "radius": parseFloat(radius.toFixed(3)),
+                    "opacity": parseFloat(opacity.toFixed(2))
+                }
+            };
+            jsonOutput.textContent = JSON.stringify(json, null, 2);
+        }
+
+        function loop() {
+            draw();
+            animAngle += 0.2;
+            requestAnimationFrame(loop);
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            if (img) {
+                ctx.drawImage(img, imgX, imgY, imgW, imgH);
+            }
+
+            const r = imgH * (radiusPercent / 100);
+            const alpha = opacityPercent / 100;
+
+            if (points.front) {
+                drawWheelEffect(points.front.px, points.front.py, r, '#38bdf8', 'FRONT', alpha);
+            }
+
+            if (points.rear) {
+                drawWheelEffect(points.rear.px, points.rear.py, r, '#f43f5e', 'REAR', alpha);
+            }
+        }
+
+        function drawWheelEffect(x, y, radius, color, label, alpha) {
+            // Контур для настройки
+            ctx.beginPath();
+            ctx.arc(x, y, radius, 0, Math.PI * 2);
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // Вращающиеся спицы
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.rotate(animAngle);
+
+            ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+            for (let i = 0; i < 6; i++) {
+                ctx.rotate(Math.PI / 3);
+                ctx.fillRect(-2, -radius * 0.8, 4, radius * 1.6);
+            }
+
+            ctx.fillStyle = `rgba(0, 0, 0, ${alpha + 0.2})`;
+            ctx.beginPath();
+            ctx.arc(0, 0, radius * 0.2, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.restore();
+
+            // Текст
+            ctx.font = '12px monospace';
+            ctx.fillStyle = '#000';
+            ctx.fillText(label, x + radius + 5, y - 5);
+            ctx.fillStyle = '#fff';
+            ctx.fillText(label, x + radius + 4, y - 6);
+        }
+
+        requestAnimationFrame(loop);
+    </script>
+</body>
+
+</html>

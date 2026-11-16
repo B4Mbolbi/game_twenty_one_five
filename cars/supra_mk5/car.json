@@ -1,0 +1,25 @@
+{
+  "id": "supra_mk5",
+  "name": "TOYOTA SUPRA MK5",
+  "style": "supra",
+  "spriteScale": 1.0,
+  "spriteAnchorY": 0.85,
+  "defaultColorIdx": 6,
+  "price": 25000,
+  "baseHp": 580,
+  "baseWeight": 1550,
+  "baseMaxRpm": 7500,
+  "desc": "Современная легенда с турбированным мотором. Идеальный баланс для драга.",
+  
+  "sprites": {
+    "0": "sprite.png"
+  },
+  
+  "wheels": {
+    "yOffset": 0.711,
+    "frontX": 0.813,
+    "rearX": 0.234,
+    "radius": 0.195,
+    "opacity": 0.85
+  }
+}

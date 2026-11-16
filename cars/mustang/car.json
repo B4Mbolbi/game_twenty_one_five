@@ -1,0 +1,25 @@
+{
+  "id": "mustang",
+  "name": "FORD MUSTANG GT",
+  "style": "mustang",
+  "spriteScale": 1.0,
+  "spriteAnchorY": 0.85,
+  "defaultColorIdx": 3,
+  "price": 16000,
+  "baseHp": 460,
+  "baseWeight": 1700,
+  "baseMaxRpm": 7000,
+  "desc": "Американская классика. Атмосферный V8, огромный крутящий момент и оранжевый цвет.",
+  
+  "sprites": {
+    "0": "sprite.png"
+  },
+  
+  "wheels": {
+    "yOffset": 0.697,
+    "frontX": 0.786,
+    "rearX": 0.236,
+    "radius": 0.155,
+    "opacity": 0.2
+  }
+}

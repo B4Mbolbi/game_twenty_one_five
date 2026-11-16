@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Редактор трассы (Game Sim)</title>
+    <style>
+        body {
+            background: #1a1a24;
+            color: #fff;
+            font-family: monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            display: flex;
+            gap: 20px;
+            background: #0b0c14;
+            padding: 20px;
+            border: 2px solid #2e334d;
+            border-radius: 8px;
+        }
+
+        canvas {
+            border: 1px solid #444;
+            cursor: crosshair;
+            background: #0c0e18;
+        }
+
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            width: 320px;
+        }
+
+        .output {
+            background: #000;
+            padding: 10px;
+            border: 1px solid #333;
+            font-size: 12px;
+            white-space: pre-wrap;
+            color: #4ade80;
+            height: 120px;
+        }
+
+        label {
+            font-size: 12px;
+            color: #94a3b8;
+        }
+
+        input[type="file"] {
+            font-size: 12px;
+        }
+
+        .info {
+            font-size: 12px;
+            color: #fbbf24;
+            margin-bottom: 10px;
+            text-align: center;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="info">1. Загрузите спрайты<br>2. Тащите машины мышкой<br>3. Скопируйте код в render.js</div>
+    <div class="container">
+        <div style="position: relative;">
+            <!-- Размеры как у реального телефона в игре -->
+            <canvas id="canvas" width="375" height="667"></canvas>
+        </div>
+        <div class="controls">
+            <div><label>Игрок:</label><br><input type="file" id="filePlayer" accept="image/png"></div>
+            <div><label>Соперник:</label><br><input type="file" id="fileAi" accept="image/png"></div>
+            <label>Масштаб: <span id="scaleVal" style="color: #38bdf8;">0.30</span></label>
+            <input type="range" id="scaleSlider" min="0.1" max="1.0" step="0.01" value="0.30">
+            <label>Линия: <span id="lineVal" style="color: #38bdf8;">43%</span></label>
+            <input type="range" id="lineSlider" min="0.1" max="0.9" step="0.01" value="0.43">
+            <label>Код для render.js:</label>
+            <div class="output" id="jsonOutput">// Здесь появится код</div>
+        </div>
+    </div>
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const filePlayer = document.getElementById('filePlayer');
+        const fileAi = document.getElementById('fileAi');
+        const scaleSlider = document.getElementById('scaleSlider');
+        const scaleVal = document.getElementById('scaleVal');
+        const lineSlider = document.getElementById('lineSlider');
+        const lineVal = document.getElementById('lineVal');
+        const jsonOutput = document.getElementById('jsonOutput');
+
+        const w = canvas.width, h = canvas.height;
+
+        // Эмуляция реальных пропорций из игры
+        const roadTop = h * 0.40; // В игре HUD сверху занимает место
+        const roadHeight = h * 0.45; // Кнопки снизу занимают место
+
+        let imgPlayer = null, imgAi = null;
+        let playerY = 0.63, aiY = 0.25;
+        let playerX = w * 0.28, aiX = w * 0.28 + 40;
+        let carScale = 0.30;
+        let lineY = 0.43;
+        let isDragging = false, dragTarget = null;
+
+        function loadImage(file, callback) {
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => { const img = new Image(); img.onload = () => callback(img); img.src = e.target.result; };
+            reader.readAsDataURL(file);
+        }
+
+        filePlayer.addEventListener('change', (e) => loadImage(e.target.files[0], (img) => { imgPlayer = img; draw(); }));
+        fileAi.addEventListener('change', (e) => loadImage(e.target.files[0], (img) => { imgAi = img; draw(); }));
+        scaleSlider.addEventListener('input', (e) => { carScale = parseFloat(e.target.value); scaleVal.textContent = carScale.toFixed(2); draw(); updateCode(); });
+        lineSlider.addEventListener('input', (e) => { lineY = parseFloat(e.target.value); lineVal.textContent = Math.round(lineY * 100) + '%'; draw(); updateCode(); });
+
+        canvas.addEventListener('mousedown', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const mx = e.clientX - rect.left;
+            const my = e.clientY - rect.top;
+            if (imgPlayer) {
+                const pY = roadTop + roadHeight * playerY;
+                const pW = imgPlayer.width * carScale;
+                const pH = imgPlayer.height * carScale;
+                if (mx > playerX - pW / 2 && mx < playerX + pW / 2 && my > pY - pH && my < pY + 20) { isDragging = true; dragTarget = 'player'; return; }
+            }
+            if (imgAi) {
+                const aY = roadTop + roadHeight * aiY;
+                const aW = imgAi.width * carScale;
+                const aH = imgAi.height * carScale;
+                if (mx > aiX - aW / 2 && mx < aiX + aW / 2 && my > aY - aH && my < aY + 20) { isDragging = true; dragTarget = 'ai'; return; }
+            }
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            const rect = canvas.getBoundingClientRect();
+            const my = e.clientY - rect.top;
+            let pct = (my - roadTop) / roadHeight;
+            pct = Math.max(0, Math.min(1, pct));
+            if (dragTarget === 'player') playerY = pct;
+            if (dragTarget === 'ai') aiY = pct;
+            draw(); updateCode();
+        });
+
+        window.addEventListener('mouseup', () => { isDragging = false; dragTarget = null; });
+
+        function updateCode() {
+            jsonOutput.textContent =
+                `// Настройки для renderRaceCanvas
+const aiScreenY = roadTop + roadHeight * ${aiY.toFixed(2)};
+const playerScreenY = roadTop + roadHeight * ${playerY.toFixed(2)};
+const carScale = ${carScale.toFixed(2)};
+const laneDividerY = roadTop + roadHeight * ${lineY.toFixed(2)};`;
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, w, h);
+
+            // 1. HUD (сверху)
+            ctx.fillStyle = '#0b0c14'; ctx.fillRect(0, 0, w, h * 0.15);
+            ctx.fillStyle = '#1e293b'; ctx.fillRect(0, h * 0.15, w, h * 0.02);
+
+            // 2. Небо и город
+            ctx.fillStyle = '#070810'; ctx.fillRect(0, h * 0.17, w, h * 0.15);
+            ctx.fillStyle = '#101324'; ctx.fillRect(0, h * 0.32, w, h * 0.08);
+
+            // 3. Дорога
+            ctx.fillStyle = '#181a22'; ctx.fillRect(0, roadTop, w, roadHeight);
+
+            // 4. Разделительная линия
+            const lY = roadTop + roadHeight * lineY;
+            ctx.fillStyle = '#94a3b8';
+            for (let dx = 0; dx < w; dx += 50) ctx.fillRect(dx, lY, 25, 3);
+
+            // 5. Машины
+            if (imgAi) drawCar(imgAi, aiX, roadTop + roadHeight * aiY, carScale * 0.92);
+            if (imgPlayer) drawCar(imgPlayer, playerX, roadTop + roadHeight * playerY, carScale);
+
+            // 6. Кнопки (снизу)
+            ctx.fillStyle = '#0b0c14'; ctx.fillRect(0, h * 0.85, w, h * 0.15);
+            ctx.fillStyle = '#272c44';
+            for (let i = 0; i < 4; i++) ctx.fillRect(10 + i * 90, h * 0.88, 80, h * 0.08);
+        }
+
+            function drawCar(img, x, y, scale) {
+                const drawW = img.width * scale;
+                const drawH = img.height * scale;
+
+                // Тень (смещена вниз под колеса, как в игре)
+                ctx.fillStyle = 'rgba(0,0,0,0.6)';
+                ctx.beginPath();
+                // Теперь тень рисуется ниже красной точки
+                ctx.ellipse(x, y + drawH * 0.15, drawW * 0.45, drawH * 0.06, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Машина
+                const dx = x - drawW / 2;
+                const dy = y - drawH * 0.85;
+                ctx.drawImage(img, dx, dy, drawW, drawH);
+
+                // Красная точка (уровень привязки)
+                ctx.fillStyle = '#ef4444';
+                ctx.beginPath(); ctx.arc(x, y, 3, 0, Math.PI * 2); ctx.fill();
+            }
+
+        draw(); updateCode();
+    </script>
+</body>
+
+</html>
