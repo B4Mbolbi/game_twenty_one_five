@@ -16,11 +16,16 @@
 <body class="max-w-md mx-auto w-full relative select-none">
 
   <header class="pixel-box px-3 py-2 flex justify-between items-center z-20 shrink-0">
-    <div class="flex items-center gap-2">
-      <span class="logo-1251 text-base sm:text-lg font-bold">12.5.1</span>
-      <span class="text-[7px] bg-rose-600/30 border border-rose-500/60 text-rose-300 px-1 py-0.5">DRAG</span>
-    </div>
+<div class="flex items-center gap-2">
+  <span class="logo-1251 text-base sm:text-lg font-bold">12.5.1</span>
+  <span class="text-[7px] bg-rose-600/30 border border-rose-500/60 text-rose-300 px-1 py-0.5">DRAG</span>
+  <span id="gameVersionDisplay" 
+    class="text-[7px] text-slate-500 bg-black/40 px-1 py-0.5 border border-slate-700">v0.0.0</span>
+</div>
     <div class="flex items-center gap-2.5">
+      <button id="resetSaveBtn"
+          class="text-[10px] bg-rose-900/50 border border-rose-700 px-2 py-1 text-rose-300 active:scale-95"
+          title="Сброс прогресса">🗑️</button>
       <button id="soundToggleBtn"
         class="text-[10px] bg-slate-800 border border-slate-600 px-2 py-1 text-slate-300 active:scale-95"
         title="Звук">🔊</button>
