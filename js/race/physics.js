@@ -87,15 +87,21 @@ race = {
             carDef: aiCarDef, 
             colorObj: aiColor,
             colorIdx: aiColorIdx,
-            dist: 0, speed: 0,
-            powerToWeight: aiPowerToWeight,
+            dist: 0, 
+            speed: 0,
+            
+            // Берем характеристики соперника из его car.json
+            hp: aiCarDef.baseHp,
+            weight: aiCarDef.baseWeight,
+            
             reactionDelay: 0.15 + Math.random() * 0.10,
             wheelAngle: 0, 
             finishedTime: null,
             
+            // Новые параметры для плавного разгона
             currentGear: 1,
-            shiftTimer: 0,
-            maxSpeed: 65 + aiPowerToWeight * 70,
+            shiftTimer: 0, 
+            maxSpeed: 60 + ((aiCarDef.baseHp / aiCarDef.baseWeight) * 1000) * 0.6, // Скорость зависит от соотношения мощности
             rpm: 1000
         }
     };
@@ -275,22 +281,38 @@ export function updateRacePhysics(dt, onFinish) {
         if (ai.shiftTimer > 0) {
             ai.shiftTimer -= dt;
         } else {
-            // Если скорость достигла предела для текущей передачи, переключаем
-            const gearMaxSpeed = ai.maxSpeed * (ai.currentGear / 6);
+            // Переключаем передачу, когда обороты достигают пика (имитация отсечки)
+            // Чем выше передача, тем больше скорость нужна для переключения
+            const gearMaxSpeed = (ai.maxSpeed / 6) * ai.currentGear;
+            
             if (ai.speed > gearMaxSpeed && ai.currentGear < 6) {
                 ai.currentGear++;
-                ai.shiftTimer = RENDER_CONFIG.ai.shiftDelay; // Задержка переключения
-                // Небольшая потеря скорости при переключении
-                ai.speed *= 0.98; 
+                // Задержка из конфига (замените 0.5 на адекватное значение, например 0.1)
+                ai.shiftTimer = RENDER_CONFIG.ai.shiftDelay; 
+                // При переключении скорость немного падает (сброс газа)
+                ai.speed *= 0.96; 
             }
         }
 
-        // 2. Разгон
-        const aiAccelFactor = (ai.powerToWeight * 40) * (1 - ai.speed / ai.maxSpeed);
-        
-        // Если ИИ на паузе переключения, он не разгоняется
+        // 2. Разгон (физика)
         if (ai.shiftTimer <= 0) {
-            ai.speed += Math.max(1.5, aiAccelFactor) * dt;
+            // Берем реальную мощность машины и умножаем на ваш множитель сложности
+            const effectiveHp = ai.hp * RENDER_CONFIG.ai.powerFactor;
+            
+            // Формула разгона: (Мощность / Вес) * Коэффициент сопротивления среды
+            // Чем больше скорость, тем медленнее идет разгон (сопротивление воздуха)
+            const dragFactor = 1 - (ai.speed / ai.maxSpeed);
+            
+            // Базовая константа 85 подобрана так, чтобы машины ехали примерно как у игрока
+            let accel = (effectiveHp / ai.weight) * 85 * dragFactor;
+            
+            // Учитываем сцепление (на старте)
+            if (ai.speed < 10) {
+                accel *= RENDER_CONFIG.ai.grip;
+            }
+            
+            // Применяем разгон
+            ai.speed += Math.max(1.0, accel) * dt;
         }
         
         ai.dist += ai.speed * dt;
