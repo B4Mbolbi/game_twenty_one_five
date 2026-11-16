@@ -10,4 +10,4 @@ export const UI_COLORS = {
     lineColor: '#94a3b8',
     shadowColor: 'rgba(0,0,0,0.6)'
 };
-export const GAME_VERSION = 'v0.0.7'; // <-- Меняйте эту строку
+export const GAME_VERSION = 'v0.0.8'; // <-- Меняйте эту строку

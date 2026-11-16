@@ -34,6 +34,6 @@ export const RENDER_CONFIG = {
         shiftDelay: 0.1, 
         
         // Влияет на старт. Если 1.0 — бот стартует идеально.
-        grip: 1.0 
+        grip: 0.8 
     }
 };
