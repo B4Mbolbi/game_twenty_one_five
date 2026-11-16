@@ -56,26 +56,49 @@ export function initRace(gameState, onFalseStart) {
     // Теперь ИИ чуть сильнее, чтобы было интересно
     const aiPowerToWeight = playerPowerToWeight * RENDER_CONFIG.ai.powerFactor;
 
-    race = {
-        // ... player без изменений ...
+race = {
+        phase: 'countdown',
+        countdownTimer: 0,
+        lightStage: 0,
+        elapsedTime: 0,
+        frame: 0,
+        
+        // ВОТ ЭТОТ БЛОК БЫЛ ПОТЕРЯН:
+        player: {
+            carDef, 
+            colorObj, 
+            stats,
+            dist: 0, 
+            speed: 0, 
+            maxSpeedKmh: 0, 
+            rpm: 1000, 
+            gear: 0,
+            nosAmount: 100, 
+            isNosActive: false, 
+            isWheelspin: false,
+            wheelAngle: 0, 
+            shiftCooldown: 0, 
+            launchRating: 'НОРМА', 
+            finishedTime: null
+        },
+        // ----------------------------
+
         ai: {
             carDef: aiCarDef, 
             colorObj: aiColor,
             colorIdx: aiColorIdx,
             dist: 0, speed: 0,
             powerToWeight: aiPowerToWeight,
-            reactionDelay: 0.15 + Math.random() * 0.10, // Чуть быстрее реакция
+            reactionDelay: 0.15 + Math.random() * 0.10,
             wheelAngle: 0, 
             finishedTime: null,
             
-            // --- НОВЫЕ ПАРАМЕТРЫ ДЛЯ ИИ ---
-            currentGear: 1, // ИИ начинает с 1-й передачи
-            shiftTimer: 0,  // Таймер для переключения
-            maxSpeed: 65 + aiPowerToWeight * 70, // Максимальная скорость
+            currentGear: 1,
+            shiftTimer: 0,
+            maxSpeed: 65 + aiPowerToWeight * 70,
             rpm: 1000
         }
     };
-
     controls.gas = false;
     controls.nos = false;
 
@@ -149,9 +172,9 @@ export function updateRacePhysics(dt, onFinish) {
     if (!race || race.phase === 'finished' || race.phase === 'falsestart') return;
     race.frame++;
 
-    const p = race.player;
+    const p = race.player; // <-- ВОТ ЭТА СТРОКА ДОЛЖНА БЫТЬ
     const ai = race.ai;
-    const maxRpm = p.stats.maxRpm;
+    const maxRpm = p.stats.maxRpm; // <-- Здесь происходит ошибка, если p === undefined
 
     // Светофор
     if (race.phase === 'countdown') {
