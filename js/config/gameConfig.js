@@ -34,6 +34,6 @@ export const RENDER_CONFIG = {
         shiftDelay: 0.5, 
         
         // Коэффициент сцепления (влияет на старт)
-        grip: 1.5 
+        grip: 0.9 
     }
 };
